@@ -1,0 +1,221 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Aug 17 15:08:01 2019
+
+@author: pjhal
+"""
+
+""" Chapter 1: Data Structures and Algorithms (Parts 1-4) """
+
+#1.1 - Unpacking a Sequence into Separate Variables
+
+#Problem: You have an N-element tuple or sequence that you would like to unpack into a collection of N variables
+#Solution: Any sequence (or iterable) can be unpacked into variables using a simple assignment operation. The only requirement is that the number of variables and structure match the sequence.
+
+p = (9, 42)
+x, y = p
+
+data = ['BlackMesa', 50, 93913.23, (2023, 12, 20)]
+
+#name, shares, price, date = data
+name, shares, price, (year, month, day) = data
+
+#Unpacking actually works with any object that happens to be iterable, not just tuples or lists (strings, files, iterators, generators)
+#When unpacking, you may sometimes want to discard certain values. Python has no special syntax, but you can often just pick a throwaway variable name for it, just make sure variable name isn't being used for something else!
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#1.2 - Unpacking Elements from Iterables of Arbitrary Length
+
+#Problem: You need to unpack N elements from an iterable, but the iterable may be longer than N elements, causing a "too many values to unpack" exception
+#Solution: Python "star expressions" can be used to address this problem. 
+
+#Say you want to drop first/last grades of a course:
+
+def drop_first_last(grades):
+    first, *middle, last = grades
+    return avg(middle)
+
+def avg(number):
+    total=0
+    for i in number:
+        total += i
+    return total/len(number)
+
+grades = (2, 4, 6, 8, 10, 12, 14, 16, 18, 20)
+print (drop_first_last(grades))
+
+#Or you have user records with name, email, phone number(s)
+    
+record = ('Bob', 'bob@example.com', '800-867-5309', '800-588-2300')
+name, email, *phone_numbers = record
+
+#phone_numbers variable will always be a list, even if there are no numbers unpacked. Thus, code won't have to account for possibility that it might not be a list or perform additional type checking
+
+#Starred variable can also be the first one in a list, say you have a sequence of values for your company's sales figures for last eight quarters. You want to see how most recent quarter compares to average of first seven:
+
+*trailing_qtrs, current_qtr = [100, 85, 72, 13, 94, 57, 104, 32]
+
+def avg_comparison(avg, current_qtr):
+    if avg == current_qtr:
+        return True
+    else:
+        return False
+     
+trailing_avg = sum(trailing_qtrs)/len(trailing_qtrs)
+print (avg_comparison(trailing_avg, current_qtr))
+
+#Extended iterable unpacking is tailor-made for unpacking iterables of unknown/arbitrary length. Oftentimes, these iterables have some known component or pattern in their construction.
+#Star unpacking allows the developer to leverage those patterns easily instead of expending effort getting at the relevant elements in the iterable.
+#Can be especially useful when iterating over a sequence of tuples of varying length, consider sequence of tagged tuples:
+
+records = [
+    ('foo', 1, 2),
+    ('bar', 'hello'),
+    ('foo', 3, 4),
+]
+
+def do_foo(x, y):
+    print('foo', x, y)
+    
+def do_bar(s):
+    print('bar', s)
+    
+for tag, *args in records:
+    if tag == 'foo':
+        do_foo(*args)
+    elif tag == 'bar':
+        do_bar(*args)
+        
+#Star unpacking can also be useful when combined with certain kinds of string processing operations, such as splitting. For example:
+
+line = 'somebody:*:-2:-2:Some User:/var/empty:/usr/bin/false'
+username, *fields, homedir, sh = line.split(':')
+
+#Sometimes you might want to unpack a value and throw it away. You can't just specify a bare * when unpacking, but you could use a common throwaway, such as '_' or 'ign' (ignored) as in:
+
+record = ('BlackMesa', 100, 555.55, (12, 18, 2050))
+name, *_, (*_, year) = record
+
+#Some similarity between star unpacking and list-processing features of functional languages. You can split a list into head/tail components like so:
+
+items = [1, 2, 3, 4, 5, 6]
+head, *tail = items
+
+#One could write a function to perform splitting in order to carry out recursive algorithm:
+
+def sum(items):
+    head, *tail = items
+    return head + sum(tail) if tail else head
+
+print (sum(items))
+
+#Recursion is not a strong feature of Python given its inherent recursion limit
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#1.3 - Keeping the Last N Items
+
+#Problem: You want to keep a limited history of the last few items seen during iteration or during some other kind of processing
+
+#Solution: Keeping a limited history is a perfect use for a [collections.deque]. Code below can perform a simple text match on a sequence of lines and yields the matching line along with the previous N lines of context when found:
+
+from collections import deque
+
+def search(lines, pattern, history=5):
+    previous_lines = deque(maxlen=history)
+    for line in lines:
+        if pattern in line:
+            yield line, previous_lines
+        previous_lines.append(line)
+
+#Example use on a file
+'''
+
+if __name__ == '__main__':
+    with open('somefile.txt') as f:
+        for line, prevlines in search(f, 'python', 5):
+            for pline in prevlines:
+                print(pline, end='')
+            print(line, end='')
+            print('-'*20)
+
+'''
+#When writing code to search for items, it is common practice to use a generator function involving [yield]. This decouples the process of searching from the code that uses the results
+#Using deque(maxlen=N) creates a fixed-size queue. When new items are added and the queue is full, the oldest item is automatically removed. For example:
+            
+q = deque(maxlen=3)
+q.append(1)
+q.append(2)
+q.append(3)
+#print(q)
+
+q.append(4)
+q.append(5)
+#print(q)
+
+#Deque can be used whenever you need a simple queue structure. If you don't give it a maximum size, you can get an unbounded queue that lets you append and pop items on either end
+
+q2 = deque()
+q2.append(1)
+q2.append(2)
+q2.append(3)
+#print(q2)
+
+q2.appendleft(4)
+#print(q2)
+
+q2.pop()
+#print(q2)
+
+q2.popleft()
+#print(q2)
+
+#Adding/popping items from either end of a queue has O(1) complexity. This is unlike a list where inserting/removing items from the front of the list is O(N)
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#1.4 - Finding the Largest or Smallest N Items
+
+#Problem: You want to make a list of the largest/smallest N items in a collection
+#Solution: The [heapq] module has two functions - nlargest() and nsmallest() - which do exactly what you want
+
+import heapq
+
+numbers = [1, 23, 32, 8, -19, -5, 12, 18, 31, 40, 38]
+print(heapq.nlargest(3, numbers))
+print(heapq.nsmallest(3, numbers))
+
+#Both of these functions also accept a key parameter which allows them to be used with more complex data structures:
+
+portfolio = [
+        {'name': 'AAPL', 'shares': 50, 'price': 500},
+        {'name': 'TSLA', 'shares': 25, 'price': 350},
+        {'name': 'AMZN', 'shares': 75, 'price': 1500},
+        {'name': 'BM', 'shares': 40, 'price': 666},
+        {'name': 'GE', 'shares': 100, 'price': 10},
+        {'name': 'FB', 'shares': 120, 'price': 200},
+        {'name': 'BYND', 'shares': 60, 'price': 400}
+]
+
+cheap = heapq.nsmallest(3, portfolio, key=lambda s: s['price'])
+expensive = heapq.nlargest(3, portfolio, key=lambda s: s['price'])
+#print(cheap, expensive)
+
+#If you are looking for the N smallest/largest items and N is small compared to the overall size of the collection, these functions provide superior performance.
+#They work by converting the data into a list where items are ordered as a heap.
+
+heap = list(numbers)
+heapq.heapify(heap)
+#print(heap)
+
+#The most important feature of a heap is that heap[0] is always the smallest item. 
+#Subsequent items can easily be found using the heapq.heappop() method, which pops off the first item and replaces it with the next smallest item
+#This operation requires O(logN) operations where N is the size of the heap. For example, to find the three smallest items:
+
+heapq.heappop(heap)
+
+#These commands work best when you are trying to find the largest or smallest numbers in a small group. For a single value, it is easiest to use min() and max().
+#If N is about the same size as the collection itself, then it is usually fastest to take a slice:
+
+#sorted(items)[:N] or sorted(items)[-N:]
