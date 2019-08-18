@@ -1,0 +1,168 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Aug 18 11:54:20 2019
+
+@author: pjhal
+"""
+
+""" Chapter 1: Data Structures and Algorithms (Parts 5-8) """
+
+#1.5 - Implementing a Priority Queue
+
+#Problem: You want to implement a queue that sorts items by a given priority and always returns the item with the highest priority on each pop operation
+#Solution: The following class uses the heapq module to implement a priority queue.
+
+import heapq
+
+class PriorityQueue:
+    def __init__(self):
+        self._queue = []
+        self._index = 0
+        
+    def push(self, item, priority):
+        heapq.heappush(self._queue, (-priority, self._index, item))
+        self._index += 1
+        
+    def pop(self):
+        return heapq.heappop(self._queue)[-1]
+
+#An example of how this might be used
+        
+class Item:
+    def __init__(self, name):
+        self.name = name
+    def __repr__(self):
+        return 'Item({!r})'.format(self.name)
+    
+q = PriorityQueue()
+q.push(Item('foo'), 1)
+q.push(Item('bar'), 5)
+q.push(Item('spam'), 4)
+q.push(Item('grok'), 1)
+#q.pop()
+
+
+#The first pop() operation returns the item with the highest priority (5). The two items with the same priority (1) are returned in the order that they were inserted into queue.
+
+#The most important aspect of this recipe is the use of the [heapq] module. heappush and heappop insert and remove items from a list _queue in such a way that the first item in the list has the smallest priority.
+#heappop() always returns the "smallest" item, so that is the key to making the queue pop the correct items. Since push and pop operations have O(logN) complexity, they are fairly efficient even for large N.
+#The queue consists of tupes of the form (-priority, index, item). The priority value is negated to get the queue to sort items from highest priority to lowest priority. This is opposite the normal heap ordering, which sorts low to high.
+#The role of the index variable is to properly order items with the same priority level. By keeping a constantly increasing index, the items will be sorted according to order in which they were inserted. Index also serves role in making comparison operations work for items that have same priority.
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#1.6 - Mapping Keys to Multiple Values in a Dictionary
+
+#Problem: You want to make a dictionary that maps keys to more than one value (so-called "multidict")
+#Solution: If you want to map keys to multiple values, you need to store the multiple values in another container such as a list or set. You might make a dictionary like this:
+
+d = {
+    'a' : [1, 2, 3],
+    'b' : [4, 5]
+} 
+
+e = {
+    'a' : {1, 2, 3},
+    'b' : {4, 5}
+}
+
+#Use a list if you want to preserve the insertion order of the items. Use a set if you want to eliminate duplicates (order negligible)
+#To easily construct such dictionaries, you can use [defaultdict] in the [collections] module. A feature of this is that it automatically initializes the first value so you can focus on adding items
+
+from collections import defaultdict
+
+d = defaultdict(list)
+d['a'].append(1)
+d['a'].append(2)
+d['a'].append(4)
+#print(d)
+
+d = defaultdict(set)
+d['a'].add(1)
+d['a'].add(2)
+d['a'].add(4)
+#print(d)
+
+#Initialization of the first value in a multivalued dictionary can be somewhat messy without defaultdict:
+pairs = [('a', 5), ('b', 10), ('c', 20)]
+
+#Case 1:
+d = {}
+for key, value in pairs:
+    if key not in d:
+        d[key] = []
+    d[key].append(value)
+    
+#Case 2 (simpler):
+d = defaultdict(list)
+for key, value in pairs:
+    d[key].append(value)
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#1.7 - Keeping Dictionaries in Order
+
+#Problem: You want to create a dictionary, and you also want to control the order of items when iterating or serializing
+#Solution: Use an [OrderedDict] from the [collections] module to control the order of items in a dictionary. It preserves the exact original insertion order of data when iterating.
+
+from collections import OrderedDict
+
+d = OrderedDict()
+d['juan'] = 1
+d['deux'] = 2
+d['trey'] = 3
+d['QUAD'] = 4
+
+#for key in d:
+    #print(key, d[key])
+    
+#This can be particularly useful when you want to build a mapping that you may want to later serialize or encode into a different format.
+#If you want to precisely control the order of fields appearing in a JSON encoding, first building the data in an OrderedDict will do the trick:
+    
+import json
+json.dumps(d)
+#print(json.dumps(d))
+
+#OrderedDict internally maintains a doubly linked list that orders keys according to insertion order. When an item is first inserted, it is placed at the end of this list.
+#OrderedDict size is more than twice as large as a normal dictionary due to this extra linked list that is created, keep this in mind for data structures involving large number of instances.
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#1.8 - Calculating with Dictionaries
+
+#Problem: You want to perform various calculations (min, max, sort, etc.) on a dictionary of data
+#Solution: In order to perform useful calculations on the dictionary contents, it is often useful to invert the keys and values of the dictionary using zip(). Consider dictionary of stock names/prices:
+
+prices = {
+    'AAPL': 450.24,
+    'TSLA': 320.86,
+    'NTDOY': 45.08,
+    'GRPN': 5.43,
+    'GE': 10.17
+}
+
+min_price = min(zip(prices.values(), prices.keys()))
+max_price = max(zip(prices.values(), prices.keys()))
+#print(min_price)
+#print(max_price)
+
+#To rank the data you can use zip() with sorted()
+
+prices_sorted = sorted(zip(prices.values(), prices.keys()))
+#print(prices_sorted)
+
+#Keep in mind that when doing these calculations, zip() creates an iterator that can only be used once
+#If you try to perform common data reductions on a dictionary, you will only process the KEYS, not the VALUES.
+#You can fix this by using the values() method of a dictionary, but sometimes you don't only want the values anyway
+#You can get the key corresponding to the min/max value if you supply a key function to min() or max():
+
+min(prices, key=lambda k: prices[k])
+max(prices, key=lambda k: prices[k])
+
+#However, to get the minimum value, you'll need to perform an extra lookup step, for example:
+
+min_value = prices[min(prices, key=lambda k: prices[k])]
+
+#The solution involving zip() solves this problem by "inverting" the dictionary into a sequence of (value, key) pairs.
+#When performing comparisons on such tuples, the value element is compared first, followed by the key
+#This gives you what you want and allows for reductions/sorting to be easily performed on the dictionary contents using a single statement.
