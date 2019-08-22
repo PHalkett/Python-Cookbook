@@ -221,3 +221,4 @@ b = {'y': 2, 'z': 69}
 
 merged = ChainMap(a,b)
 a['x'] = 12
+
